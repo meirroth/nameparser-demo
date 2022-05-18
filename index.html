@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Javascript Name Parser Simple Example</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css"
+    />
+  </head>
+  <body translate="no">
+    <div class="container mt-5">
+      <div>
+        <h5>
+          JavaScript code to split names into their respective components
+          (first, last, etc)
+        </h5>
+        <p>
+          Source
+          <a
+            href="https://github.com/joshfraser/JavaScript-Name-Parser"
+            target="_blank"
+            el="noopener noreferrer"
+            >GitHub</a
+          ><br />
+          Based on
+          <a
+            href="http://www.onlineaspect.com/2009/08/17/splitting-names/"
+            target="_blank"
+            el="noopener noreferrer"
+            >PHP Name Parser</a
+          >
+          by
+          <a
+            href="http://joshfraser.com"
+            target="_blank"
+            el="noopener noreferrer"
+            >Josh Fraser</a
+          ><br />
+          Ported to JavaScript by
+          <a
+            href="http://pemburnia.com"
+            target="_blank"
+            el="noopener noreferrer"
+            >Mark Pemburn</a
+          ><br />
+          Released under Apache 2.0 license
+        </p>
+        <p>Example UI by Meir Roth</p>
+        <div class="alert alert-info" role="alert">
+          Two other projects that will support a bigger variety of names:<br />
+          <a
+            href="https://github.com/derek73/python-nameparser"
+            target="_blank"
+            el="noopener noreferrer"
+            >https://github.com/derek73/python-nameparser</a
+          ><br />
+          <a
+            href="https://www.npmjs.com/package/parse-full-name"
+            target="_blank"
+            el="noopener noreferrer"
+            >https://www.npmjs.com/package/parse-full-name</a
+          >
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-8 input-group">
+          <input
+            id="nameInput"
+            type="text"
+            class="form-control"
+            placeholder="Input full name"
+          />
+          <span class="input-group-append">
+            <button id="formatBtn" class="btn btn-info" onclick="formatInput()">
+              Format Name
+            </button>
+          </span>
+        </div>
+      </div>
+      <table id="table" class="table table-bordered mt-3">
+        <thead>
+          <tr>
+            <th scope="col">Full Name</th>
+            <th scope="col">Result</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <!-- https://github.com/joshfraser/JavaScript-Name-Parser/blob/master/browser-shims.js -->
+    <script>
+      if (!String.prototype.trim) { String.prototype.trim = function() { return this.replace(/^\s+|\s+$/gm, ''); }; } if (!Array.prototype.indexOf) { Array.prototype.indexOf = function(searchElement, fromIndex) { if (this === undefined || this === null) { throw new TypeError('"this" is null or not defined'); } var length = this.length >>> 0; // Hack to convert object.length to a UInt32 fromIndex = +fromIndex || 0; if (Math.abs(fromIndex) === Infinity) { fromIndex = 0; } if (fromIndex < 0) { fromIndex += length; if (fromIndex < 0) { fromIndex = 0; } } for (; fromIndex < length; fromIndex++) { if (this[fromIndex] === searchElement) { return fromIndex; } } return -1; }; } if (!Array.prototype.filter) { Array.prototype.filter = function(fun /*, thisArg */ ) { if (this === undefined || this === null) throw new TypeError(); var t = Object(this); var len = t.length >>> 0; if (typeof fun !== "function") throw new TypeError(); var res = []; var thisArg = arguments.length >= 2 ? arguments[1] : undefined; for (var i = 0; i < len; i++) { if (i in t) { var val = t[i]; // NOTE: Technically this should Object.defineProperty at // the next index, as push can be affected by // properties on Object.prototype and Array.prototype. // But that method's new, and collisions should be // rare, so use the more-compatible alternative. if (fun.call(thisArg, val, i, t)) res.push(val); } } return res; }; } if (!Array.prototype.map) { Array.prototype.map = function(fun /*, thisArg */ ) { if (this === undefined || this === null) throw new TypeError(); var t = Object(this); var len = t.length >>> 0; if (typeof fun !== "function") throw new TypeError(); var res = new Array(len); var thisArg = arguments.length >= 2 ? arguments[1] : undefined; for (var i = 0; i < len; i++) { // NOTE: Absolute correctness would demand Object.defineProperty // be used. But this method is fairly new, and failure is // possible only if Object.prototype or Array.prototype // has a property |i| (very unlikely), so use a less-correct // but more portable alternative. if (i in t) res[i] = fun.call(thisArg, t[i], i, t); } return res; }; }
+    </script>
+    <!-- https://github.com/joshfraser/JavaScript-Name-Parser/blob/master/parse-names.js -->
+    <script>
+      // based on PHP Name Parser by Josh Fraser (joshfraser.com) // http://www.onlineaspect.com/2009/08/17/splitting-names/ // ported to JavaScript by Mark Pemburn (pemburnia.com) // released under Apache 2.0 license var NameParse = (function() { function NameParse() { return NameParse; } // split full names into the following parts: // - prefix / salutation (Mr., Mrs., etc) // - given name / first name // - middle initials // - surname / last name // - suffix (II, Phd, Jr, etc) NameParse.parse = function(fullastName) { fullastName = fullastName.trim(); var nameParts = []; var lastName = ""; var firstName = ""; var initials = ""; var word = null; var j = 0; var i = 0; // split into words // completely ignore any words in parentheses nameParts = fullastName.split(" ").filter(function(namePart) { return (namePart.indexOf("(") === -1); }); var numWords = nameParts.length; // is the first word a title? (Mr. Mrs, etc) var salutation = this.is_salutation(nameParts[0]); var suffix = this.is_suffix(nameParts[numWords - 1]); // set the range for the middle part of the name (trim prefixes & suffixes) var start = (salutation) ? 1 : 0; var end = (suffix) ? numWords - 1 : numWords; word = nameParts[start]; // if we start off with an initial, we'll call it the first name if (this.is_initial(word)) { // if so, do a look-ahead to see if they go by their middle name // for ex: "R. Jason Smith" => "Jason Smith" & "R." is stored as an initial // but "R. J. Smith" => "R. Smith" and "J." is stored as an initial if (this.is_initial(nameParts[start + 1])) { firstName += " " + word.toUpperCase(); } else { initials += " " + word.toUpperCase(); } } else { firstName += " " + this.fix_case(word); } // concat the first name for (i = start + 1; i < (end - 1); i++) { word = nameParts[i]; // move on to parsing the last name if we find an indicator of a compound last name (Von, Van, etc) // we do not check earlier to allow for rare cases where an indicator is actually the first name (like "Von Fabella") if (this.is_compound_lastName(word)) { if (!(this.is_initial(word) && word === word.toUpperCase())) { //If it's one letter and capitalized, consider it a middle initial break; } } if (this.is_initial(word)) { initials += " " + word.toUpperCase(); } else { firstName += " " + this.fix_case(word); } } // check that we have more than 1 word in our string if ((end - start) > 1) { // concat the last name for (j = i; j < end; j++) { lastName += " " + this.fix_case(nameParts[j]); } } // return the various parts in an array return { "salutation": salutation || "", "firstName": firstName.trim(), "initials": initials.trim(), "lastName": lastName.trim(), "suffix": suffix || "" }; }; NameParse.removeIgnoredChars = function(word) { //ignore periods return word.replace(".", ""); }; // detect and format standard salutations // I'm only considering english honorifics for now & not words like NameParse.is_salutation = function(word) { word = this.removeIgnoredChars(word).toLowerCase(); // returns normalized values if (word === "mr" || word === "master" || word === "mister") { return "Mr."; } else if (word === "mrs") { return "Mrs."; } else if (word === "miss" || word === "ms") { return "Ms."; } else if (word === "dr") { return "Dr."; } else if (word === "rev") { return "Rev."; } else if (word === "fr") { return "Fr."; } else if (word === "prof") { return "Prof."; } else if (word === "rabbi") { return "Rabbi"; } else if (word === "rav") { return "Rav"; } else { return false; } }; // detect and format common suffixes NameParse.is_suffix = function(word) { word = this.removeIgnoredChars(word).toLowerCase(); // these are some common suffixes - what am I missing? var suffixArray = [ 'I', 'II', 'III', 'IV', 'V', 'Senior', 'Junior', 'Jr', 'Sr', 'PhD', 'APR', 'RPh', 'PE', 'MD', 'MA', 'DMD', 'CME', "BVM", "CFRE", "CLU", "CPA", "CSC", "CSJ", "DC", "DD", "DDS", "DO", "DVM", "EdD", "Esq", "JD", "LLD", "OD", "OSB", "PC", "Ret", "RGS", "RN", "RNC", "SHCJ", "SJ", "SNJM", "SSMO", "USA", "USAF", "USAFR", "USAR", "USCG", "USMC", "USMCR", "USN", "USNR" ]; var suffixIndex = suffixArray.map(function(suffix) { return suffix.toLowerCase(); }).indexOf(word); if (suffixIndex >= 0) { return suffixArray[suffixIndex]; } else { return false; } }; // detect compound last names like "Von Fange" NameParse.is_compound_lastName = function(word) { word = word.toLowerCase(); // these are some common prefixes that identify a compound last names - what am I missing? var words = ['vere', 'von', 'van', 'de', 'del', 'della', 'di', 'da', 'pietro', 'vanden', 'du', 'st.', 'st', 'la', 'lo', 'ter', 'o', "o'", 'mac', 'fitz']; return (words.indexOf(word) >= 0); }; // single letter, possibly followed by a period NameParse.is_initial = function(word) { if (!word) { return false; } word = this.removeIgnoredChars(word); return (word.length === 1); }; // detect mixed case words like "McDonald" // returns false if the string is all one case NameParse.is_camel_case = function(word) { var ucReg = /[A-Z]+/; var lcReg = /[a-z]+/; return (ucReg.exec(word) && lcReg.exec(word)); }; // ucfirst words split by dashes or periods // ucfirst all upper/lower strings, but leave camelcase words alone NameParse.fix_case = function(word) { // uppercase words split by dashes, like "Kimura-Fay" word = this.safe_ucfirst("-", word); // uppercase words split by periods, like "J.P." word = this.safe_ucfirst(".", word); return word; }; // helper for this.fix_case // uppercase words split by the seperator (ex. dashes or periods) NameParse.safe_ucfirst = function(seperator, word) { return word.split(seperator).map(function(thisWord) { if (this.is_camel_case(thisWord)) { return thisWord; } else { return thisWord.substr(0, 1).toUpperCase() + thisWord.substr(1).toLowerCase(); } }, this).join(seperator); }; return NameParse; })(); if (module) { module.exports = NameParse; }
+    </script>
+    <script id="rendered-js">
+      var names = [
+        { name: "John Doe" },
+        { name: "Mr Anthony R Von Fange III" },
+        { name: "Sara Ann Fraser" },
+        { name: "Adam" },
+        { name: "Jonathan Smith" },
+        { name: "Anthony Von Fange III" },
+        { name: "Mr John Doe" },
+        { name: "Smarty Pants Phd" },
+        { name: "Mark P Williams" },
+        { name: "Jack O'Neill" },
+        { name: "Jack o Neill" },
+        { name: "Jack O Neill" },
+      ];
+      var tableBody = document.getElementById("tableBody");
+      var nameInput = document.getElementById("nameInput");
+      var formatBtn = document.getElementById("formatBtn");
+      names.forEach(function (testCase) {
+        var result = NameParse.parse(testCase.name),
+          row = tableBody.insertRow(0),
+          cell1 = row.insertCell(0),
+          cell2 = row.insertCell(1);
+        cell1.innerHTML = testCase.name;
+        cell2.innerHTML = `<span class="text-muted">Salutation:</span> <strong>${result.salutation}</strong></br> <span class="text-muted">First:</span> <strong>${result.firstName}</strong></br> <span class="text-muted">Initials:</span> <strong>${result.initials}</strong></br> <span class="text-muted">Last:</span> <strong>${result.lastName}</strong></br> <span class="text-muted">Suffix:</span> <strong>${result.suffix}</strong>`;
+      });
+      nameInput.addEventListener("keyup", function (event) {
+        if (event.keyCode === 13) {
+          event.preventDefault();
+          formatBtn.click();
+        }
+      });
+      function formatInput() {
+        if (nameInput.value != "") {
+          var result = NameParse.parse(nameInput.value),
+            row = tableBody.insertRow(0),
+            cell1 = row.insertCell(0),
+            cell2 = row.insertCell(1);
+          cell1.innerHTML = nameInput.value;
+          cell2.innerHTML = `<span class="text-muted">Salutation:</span> <strong>${result.salutation}</strong></br> <span class="text-muted">First:</span> <strong>${result.firstName}</strong></br> <span class="text-muted">Initials:</span> <strong>${result.initials}</strong></br> <span class="text-muted">Last:</span> <strong>${result.lastName}</strong></br> <span class="text-muted">Suffix:</span> <strong>${result.suffix}</strong>`;
+          nameInput.value = "";
+        }
+      }
+    </script>
+  </body>
+</html>
